@@ -761,8 +761,19 @@ var LayaSample=(function(){
 		/***敌机被击半径表***/
 		this.radius=[ 20 ,35 ,80];
 		/****主角死亡后游戏结束时间***/
-		this.deathTime=0
+		this.deathTime=0;
+		/***敌人刷新加速****/
+		this.createTime=0;
+		/***敌人速度提升***/
+		this.speedUp=0;
+		/***敌人血量提升 ***/
+		this.hpUp=0;
+		/***敌人数量提升 ***/
+		this.numUp=0;
+		/****升级等级所需的成绩数量***/
+		this.levelUpScore=10;
 		Laya.init (720 ,1280 ,WebGL);
+		Stat.show ();
 		Laya.stage.scaleMode="exactfit";
 		Laya.loader.load ("res/atlas/gameUI.atlas" ,Handler.create (this ,this.gameStart))
 	}
@@ -782,7 +793,14 @@ var LayaSample=(function(){
 	游戏中，游戏初始化
 	*/
 	__proto.gameInit=function(){
-		this.start.close ();this.map=this.map|| new GameMap ();
+		this.start.close ();
+		LayaSample.level=1;
+		LayaSample.score=0;
+		this.createTime=0;
+		this.speedUp=0;
+		this.hpUp=0;
+		this.numUp=0;
+		this.levelUpScore=10;this.map=this.map|| new GameMap ();
 		Laya.stage.addChild (this.map);this.roleLayer=this.roleLayer|| new Sprite ();
 		Laya.stage.addChild (this.roleLayer);this.play=this.play|| new GamePlay ();
 		Laya.stage.addChild (this.play);this.hero=this.hero|| new Role ();
@@ -838,6 +856,7 @@ var LayaSample=(function(){
 		}
 		else{
 			this.hero.shoot ();
+			this.levelUp ();
 		}
 		this.map.updateMap ()
 		for (var i=this.roleLayer.numChildren-1;i >-1;i--){
@@ -862,14 +881,29 @@ var LayaSample=(function(){
 				}
 			}
 		}
-		if (Laya.timer.currFrame % 80==0){
-			this.createEnemy (0 ,this.hps[ 0] ,this.speeds[ 0] ,this.nums[ 0]);
+		if (Laya.timer.currFrame % (80-this.createTime)==0){
+			this.createEnemy (0 ,this.hps[ 0] ,this.speeds[ 0]+this.speedUp ,this.nums[ 0]+this.numUp);
 		}
-		if (Laya.timer.currFrame % 160==0){
-			this.createEnemy (1 ,this.hps[ 1] ,this.speeds[ 1] ,this.nums[ 1]);
+		if (Laya.timer.currFrame % (170-this.createTime *2)==0){
+			this.createEnemy (1 ,this.hps[ 1]+this.hpUp *2 ,this.speeds[ 1]+this.speedUp ,this.nums[ 1]+this.numUp);
 		}
-		if (Laya.timer.currFrame % 1000==0){
-			this.createEnemy (2 ,this.hps[ 2] ,this.speeds[ 2] ,this.nums[ 2]);
+		if (Laya.timer.currFrame % (1000-this.createTime *3)==0){
+			this.createEnemy (2 ,this.hps[ 2]+this.hpUp *6 ,this.speeds[ 2] ,this.nums[ 2]);
+		}
+	}
+
+	/**
+	游戏升级计算
+	*/
+	__proto.levelUp=function(){
+		if (LayaSample.score > this.levelUpScore){
+			LayaSample.level++;
+			this.hero.hp=Math.min (this.hero.hp+LayaSample.level *1 ,30);
+			this.createTime=LayaSample.level < 30 ? LayaSample.level *2 :60;
+			this.speedUp=Math.floor (LayaSample.level / 6);
+			this.hpUp=Math.floor (LayaSample.level / 8);
+			this.numUp=Math.floor (LayaSample.level / 10);
+			this.levelUpScore+=LayaSample.level *10;
 		}
 	}
 
@@ -24653,6 +24687,10 @@ var Role=(function(_super){
 			}
 			else{
 				this.playAction ("die");
+				if (this.type=="hero")
+					SoundManager.playSound ("sound/game_over.mp3");
+				else
+				SoundManager.playSound ("sound/enemy1_die.mp3");
 				if (this.type !="hero" && !this.isBullet){
 					LayaSample.score++;
 				}
@@ -24675,11 +24713,12 @@ var Role=(function(_super){
 	}
 
 	/**
-	*角色吃到道具，加血或子弹
+	*角色吃到道具，加血或子弹级别
 	*/
 	__proto.eatProp=function(prop){
 		if (this.type !="hero" || prop.propType==0)
 			return;
+		SoundManager.playSound ("sound/achievement.mp3");
 		if (prop.propType==1){
 			LayaSample.score++;
 			this.bulletLevel++
@@ -24747,6 +24786,7 @@ var Role=(function(_super){
 				bullet.visible=true;
 				bullet.pos (this.x+pos[ i] ,this.y-80);
 				this.parent.addChild (bullet);
+				SoundManager.playSound ("sound/bullet.mp3");
 			}
 		}
 	}

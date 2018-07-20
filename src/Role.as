@@ -5,6 +5,7 @@ package
 	import laya.display.Sprite;
 	import laya.events.Event;
 	import laya.maths.Rectangle;
+	import laya.media.SoundManager;
 	import laya.utils.Browser;
 	import laya.utils.Handler;
 	import laya.utils.Pool;
@@ -152,6 +153,12 @@ package
 					//添加死亡动画
 					this.playAction ( "die" );
 
+					//添加死亡音效
+					if ( this.type == "hero" )
+						SoundManager.playSound ( "sound/game_over.mp3" );
+					else
+						SoundManager.playSound ( "sound/enemy1_die.mp3" );
+
 					//如果碰撞掉血死亡者不是角色和子弹
 					if ( this.type != "hero" && !this.isBullet )
 					{
@@ -188,16 +195,17 @@ package
 		}
 
 		/**
-		 * 角色吃到道具，加血或子弹
+		 * 角色吃到道具，加血或子弹级别
 		 */
 		public function eatProp ( prop : Role ) : void
 		{
 
-			//如果调用者不是主角或prop不是道具，则返回
+			//如果调用者是主角或prop不是道具，则返回
 			if ( this.type != "hero" || prop.propType == 0 )
 				return;
-
 			//添加吃强化道具音效                    
+			SoundManager.playSound ( "sound/achievement.mp3" );
+
 			//吃子弹箱
 			if ( prop.propType == 1 )
 			{
@@ -318,6 +326,8 @@ package
 					bullet.pos ( this.x + pos[ i ] , this.y - 80 );
 					//添加到角色层
 					this.parent.addChild ( bullet );
+					//添加子弹音效                    
+					SoundManager.playSound ( "sound/bullet.mp3" );
 				}
 			}
 

@@ -57,11 +57,28 @@
 		/****主角死亡后游戏结束时间***/
 		private var deathTime : int = 0
 
+		//游戏关卡提升属性
+		/***敌人刷新加速****/
+		private var createTime : Number = 0;
+
+		/***敌人速度提升***/
+		private var speedUp : Number = 0;
+
+		/***敌人血量提升    ***/
+		private var hpUp : Number = 0;
+
+		/***敌人数量提升    ***/
+		private var numUp : Number = 0;
+
+		/****升级等级所需的成绩数量***/
+		private var levelUpScore : Number = 10;
+
 		public function LayaSample ()
 		{
 
 			//初始化引擎，建议增加WebGl模式
 			Laya.init ( 720 , 1280 , WebGL );
+			Stat.show ();
 			//全屏不等比缩放模式
 			Laya.stage.scaleMode = Stage.SCALE_EXACTFIT;
 			//加载游戏页面资源(如果界面资源太多太大[超过50k],建议开始页面单独建立文件夹打包)
@@ -92,6 +109,21 @@
 
 			//缓动动画关闭效果。IDE中页面为Dialog才可用
 			start.close ();
+			//重置关卡数据
+			//游戏关卡数
+			level = 1;
+			//玩家得分
+			score = 0;
+			//敌人刷新加速
+			createTime = 0;
+			//敌人速度提升
+			speedUp = 0;
+			//敌人血量提升    
+			hpUp = 0;
+			//敌人数量提升                
+			numUp = 0;
+			//升级等级所需的成绩数量
+			levelUpScore = 10;
 			//实例化地图背景页面(如果已实例化，不需要重新new)
 			map ||= new GameMap ();
 			//加载到舞台
@@ -117,8 +149,6 @@
 			Laya.stage.on ( Event.MOUSE_DOWN , this , onMouseDown );
 			//鼠标抬起监听
 			Laya.stage.on ( Event.MOUSE_UP , this , onMouseUp );
-			//模拟游戏结束，30秒时间
-			//            Laya.timer.once(30000,this,gameOver);
 			//游戏主循环
 			Laya.timer.frameLoop ( 1 , this , loop );
 
@@ -190,10 +220,12 @@
 					return;
 				}
 			}
-			else
+			else //主角未死亡
 			{
-				//主角未死亡将持续射击
+				//主角射击
 				hero.shoot ();
+				//游戏升级计算
+				this.levelUp ();
 			}
 			//地图滚动更新
 			map.updateMap ()
@@ -243,23 +275,49 @@
 				}
 			}
 
-			//创建敌机,不同类型飞机创建的间隔时间不一样
-			//生成小敌机
-			if ( Laya.timer.currFrame % 80 == 0 )
+			//创建敌机，加入关卡升级数据，提高难度
+			//生成小飞机
+			if ( Laya.timer.currFrame % ( 80 - createTime ) == 0 )
 			{
-				createEnemy ( 0 , hps[ 0 ] , speeds[ 0 ] , nums[ 0 ]);
+				createEnemy ( 0 , hps[ 0 ] , speeds[ 0 ] + speedUp , nums[ 0 ] + numUp );
 			}
 
-			//生成中型敌机
-			if ( Laya.timer.currFrame % 160 == 0 )
+			//生成中型飞机
+			if ( Laya.timer.currFrame % ( 170 - createTime * 2 ) == 0 )
 			{
-				createEnemy ( 1 , hps[ 1 ] , speeds[ 1 ] , nums[ 1 ]);
+				createEnemy ( 1 , hps[ 1 ] + hpUp * 2 , speeds[ 1 ] + speedUp , nums[ 1 ] + numUp );
 			}
 
-			//生成boss敌机
-			if ( Laya.timer.currFrame % 1000 == 0 )
+			//生成boss
+			if ( Laya.timer.currFrame % ( 1000 - createTime * 3 ) == 0 )
 			{
-				createEnemy ( 2 , hps[ 2 ] , speeds[ 2 ] , nums[ 2 ]);
+				createEnemy ( 2 , hps[ 2 ] + hpUp * 6 , speeds[ 2 ] , nums[ 2 ]);
+			}
+
+		}
+
+		/**
+		 游戏升级计算
+		 */
+		private function levelUp () : void
+		{
+
+			if ( score > levelUpScore )
+			{
+				//关卡等级提升
+				level++;
+				//角色血量增加，最大30
+				hero.hp = Math.min ( hero.hp + level * 1 , 30 );
+				//关卡越高，创建敌机间隔越短
+				createTime = level < 30 ? level * 2 : 60;
+				//关卡越高，敌机飞行速度越高
+				speedUp = Math.floor ( level / 6 );
+				//关卡越高，敌机血量越高
+				hpUp = Math.floor ( level / 8 );
+				//关卡越高，敌机数量越多
+				numUp = Math.floor ( level / 10 );
+				//提高下一级的升级分数
+				levelUpScore += level * 10;
 			}
 
 		}
